@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐍 贪吃蛇 8-bit 背景音乐</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #0a0a1a, #1a1a3e);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Courier New', monospace;
+    color: #33ff33;
+    padding: 20px;
+  }
+  .container {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #33ff33;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 700px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(51, 255, 51, 0.15), inset 0 0 60px rgba(51, 255, 51, 0.03);
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(51, 255, 51, 0.5);
+    letter-spacing: 4px;
+  }
+  .subtitle {
+    color: #88ff88;
+    font-size: 14px;
+    margin-bottom: 30px;
+    opacity: 0.7;
+  }
+  .btn-group {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .btn {
+    background: transparent;
+    border: 2px solid #33ff33;
+    color: #33ff33;
+    padding: 12px 32px;
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    letter-spacing: 2px;
+  }
+  .btn:hover { background: #33ff33; color: #0a0a1a; }
+  .btn:active { transform: scale(0.95); }
+  .btn.playing { background: #ff3333; border-color: #ff3333; color: #fff; }
+  .btn.playing:hover { background: #ff5555; }
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .controls label { font-size: 14px; min-width: 40px; }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 200px;
+    height: 6px;
+    background: #1a3a1a;
+    border-radius: 3px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #33ff33;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .visualizer {
+    background: #050510;
+    border: 1px solid #1a3a1a;
+    border-radius: 8px;
+    height: 120px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .bar {
+    width: 8px;
+    background: #33ff33;
+    border-radius: 2px 2px 0 0;
+    transition: height 0.05s;
+    flex-shrink: 0;
+  }
+  .bar.active { background: #66ff66; box-shadow: 0 0 8px #33ff33; }
+  .info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #88ff88;
+    margin-bottom: 16px;
+  }
+  .channel-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-size: 12px;
+    color: #66aa66;
+  }
+  .channel-indicator span { display: flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+  .dot.melody { background: #33ff33; }
+  .dot.harmony { background: #33ccff; }
+  .dot.bass { background: #ff9933; }
+  .dot.perc { background: #ff33ff; }
+  .dot.on { box-shadow: 0 0 6px currentColor; }
+  .snake-decoration {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 16px;
+    font-size: 20px;
+    opacity: 0.3;
+  }
+  .snake-decoration span { animation: wiggle 1s ease-in-out infinite; }
+  .snake-decoration span:nth-child(2) { animation-delay: 0.1s; }
+  .snake-decoration span:nth-child(3) { animation-delay: 0.2s; }
+  .snake-decoration span:nth-child(4) { animation-delay: 0.3s; }
+  .snake-decoration span:nth-child(5) { animation-delay: 0.4s; }
+  .snake-decoration span:nth-child(6) { animation-delay: 0.5s; }
+  .snake-decoration span:nth-child(7) { animation-delay: 0.6s; }
+  @keyframes wiggle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .bpm-display { font-size: 24px; margin-bottom: 8px; }
+  .bpm-display small { font-size: 14px; opacity: 0.5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🐍 贪吃蛇</h1>
+  <div class="subtitle">◈ 8-BIT 背景音乐 ◈</div>
+
+  <div class="bpm-display"><span id="bpmDisplay">140</span> <small>BPM</small></div>
+
+  <div class="btn-group">
+    <button class="btn" id="playBtn">▶ 播放</button>
+    <button class="btn" id="stopBtn">■ 停止</button>
+  </div>
+
+  <div class="controls">
+    <label>🔊</label>
+    <input type="range" id="volumeSlider" min="0" max="100" value="65">
+  </div>
+
+  <div class="visualizer" id="visualizer"></div>
+
+  <div class="info">
+    <span id="timeDisplay">00:00</span>
+    <span id="sectionDisplay">—</span>
+  </div>
+
+  <div class="channel-indicator">
+    <span><span class="dot melody" id="dotMelody"></span>旋律</span>
+    <span><span class="dot harmony" id="dotHarmony"></span>和声</span>
+    <span><span class="dot bass" id="dotBass"></span>低音</span>
+    <span><span class="dot perc" id="dotPerc"></span>打击</span>
+  </div>
+
+  <div class="snake-decoration">
+    <span>█</span><span>█</span><span>█</span><span>█</span><span>█</span><span>█</span><span>█</span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  8-BIT SNAKE GAME BACKGROUND MUSIC — Web Audio API
+//  NES-style 4-channel: Square1, Square2, Triangle, Noise
+// ============================================================
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// ---- note frequency table ----
+const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12);
+const N = {
+  'C3': NOTE(48), 'C#3': NOTE(49), 'D3': NOTE(50), 'D#3': NOTE(51),
+  'E3': NOTE(52), 'F3': NOTE(53), 'F#3': NOTE(54), 'G3': NOTE(55),
+  'G#3': NOTE(56), 'A3': NOTE(57), 'A#3': NOTE(58), 'B3': NOTE(59),
+  'C4': NOTE(60), 'C#4': NOTE(61), 'D4': NOTE(62), 'D#4': NOTE(63),
+  'E4': NOTE(64), 'F4': NOTE(65), 'F#4': NOTE(66), 'G4': NOTE(67),
+  'G#4': NOTE(68), 'A4': NOTE(69), 'A#4': NOTE(70), 'B4': NOTE(71),
+  'C5': NOTE(72), 'C#5': NOTE(73), 'D5': NOTE(74), 'D#5': NOTE(75),
+  'E5': NOTE(76), 'F5': NOTE(77), 'F#5': NOTE(78), 'G5': NOTE(79),
+  'G#5': NOTE(80), 'A5': NOTE(81), 'A#5': NOTE(82), 'B5': NOTE(83),
+  'C6': NOTE(84),
+};
+const _ = null; // rest
+
+// ---- song parameters ----
+const BPM = 140;
+const BEAT_MS = 60000 / BPM;
+const ROW = BEAT_MS / 4; // one sixteenth note in ms
+
+// ---- pattern format: array of [freq_or_null, duration_in_16ths] ----
+// Each pattern row = 1 sixteenth note
+
+function p(notes) { return notes; }
+
+// ---- MELODY (Square wave 1, duty 50%) ----
+// Catchy, cheerful main melody in C major
+const melodyPattern = p([
+  // === INTRO (4 bars) ===
+  // bar 1-2: pickup / building motif
+  [N.C4, 2], [_, 1], [N.E4, 2], [_, 1],
+  [N.G4, 2], [_, 1], [N.C5, 3], [_, 1],
+  [N.G4, 2], [_, 1], [N.E4, 2], [_, 1],
+  [N.C4, 4], [N.D4, 2], [_, 2],
+
+  // bar 3-4
+  [N.E4, 2], [_, 1], [N.G4, 2], [_, 1],
+  [N.A4, 2], [N.G4, 1], [N.E4, 2], [_, 1],
+  [N.D4, 2], [N.C4, 1], [N.D4, 2], [N.E4, 1],
+  [N.C4, 4], [_, 4],
+
+  // === SECTION A (8 bars) ===
+  // bar 5-6
+  [N.C4, 1], [N.E4, 1], [N.G4, 1], [N.C5, 1],
+  [N.G4, 1], [N.E4, 1], [N.C4, 1], [N.D4, 1],
+  [N.E4, 1], [N.G4, 1], [N.A4, 2], [_, 1],
+  [N.G4, 1], [N.E4, 1], [N.D4, 1], [N.C4, 1],
+
+  // bar 7-8
+  [N.C4, 1], [N.E4, 1], [N.G4, 1], [N.A4, 1],
+  [N.G4, 1], [N.E4, 1], [N.D4, 1], [N.C4, 1],
+  [N.D4, 1], [N.F4, 1], [N.A4, 2], [_, 1],
+  [N.G4, 1], [N.E4, 1], [N.C4, 1], [N.D4, 1],
+
+  // bar 9-10
+  [N.E4, 1], [N.G4, 1], [N.C5, 1], [N.B4, 1],
+  [N.G4, 1], [N.E4, 1], [N.D4, 1], [N.C4, 1],
+  [N.D4, 1], [N.F4, 1], [N.A4, 1], [N.G4, 1],
+  [N.F4, 1], [N.D4, 1], [N.C4, 1], [N.D4, 1],
+
+  // bar 11-12
+  [N.E4, 1], [N.C4, 1], [N.E4, 1], [N.G4, 1],
+  [N.C5, 1], [N.G4, 1], [N.E4, 1], [N.C4, 1],
+  [N.G3, 1], [N.A3, 1], [N.B3, 1], [N.C4, 1],
+  [N.D4, 1], [N.E4, 1], [N.D4, 1], [N.C4, 1],
+
+  // === SECTION B (8 bars) — variation ===
+  // bar 13-14
+  [N.A3, 1], [N.C4, 1], [N.E4, 1], [N.A4, 1],
+  [N.E4, 1], [N.C4, 1], [N.A3, 1], [N.C4, 1],
+  [N.G3, 1], [N.B3, 1], [N.D4, 1], [N.G4, 1],
+  [N.D4, 1], [N.B3, 1], [N.G3, 1], [N.B3, 1],
+
+  // bar 15-16
+  [N.F3, 1], [N.A3, 1], [N.C4, 1], [N.F4, 1],
+  [N.E4, 1], [N.C4, 1], [N.A3, 1], [N.F3, 1],
+  [N.G3, 1], [N.B3, 1], [N.D4, 1], [N.G4, 1],
+  [N.F4, 1], [N.D4, 1], [N.B3, 1], [N.G3, 1],
+
+  // bar 17-18
+  [N.E4, 1], [N.G4, 1], [N.C5, 1], [N.D5, 1],
+  [N.C5, 1], [N.G4, 1], [N.E4, 1], [N.C4, 1],
+  [N.F4, 1], [N.A4, 1], [N.C5, 1], [N.A4, 1],
+  [N.F4, 1], [N.D4, 1], [N.F4, 1], [N.A4, 1],
+
+  // bar 19-20 — build-up / transition
+  [N.G4, 1], [N.F4, 1], [N.E4, 1], [N.D4, 1],
+  [N.C4, 1], [N.D4, 1], [N.E4, 1], [N.F4, 1],
+  [N.G4, 2], [N.G4, 1], [N.E4, 2], [_, 1],
+  [N.C4, 2], [N.D4, 2], [N.C4, 2], [_, 2],
+]);
+
+// ---- HARMONY (Square wave 2, duty 25% — arpeggios/countermelody) ----
+const harmonyPattern = p([
+  // INTRO
+  [_, 4], [_, 4], [_, 4], [_, 4],
+  [_, 4], [_, 4], [_, 4], [_, 4],
+
+  // SECTION A — arpeggios
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+
+  [N.F4, 1], [N.C4, 1], [N.A3, 1], [N.C4, 1],
+  [N.F4, 1], [N.C4, 1], [N.A3, 1], [N.C4, 1],
+  [N.F4, 1], [N.C4, 1], [N.A3, 1], [N.C4, 1],
+  [N.E4, 1], [N.C4, 1], [N.G3, 1], [N.C4, 1],
+
+  [N.G4, 1], [N.E4, 1], [N.C4, 1], [N.E4, 1],
+  [N.G4, 1], [N.E4, 1], [N.C4, 1], [N.E4, 1],
+  [N.A4, 1], [N.F4, 1], [N.C4, 1], [N.F4, 1],
+  [N.G4, 1], [N.E4, 1], [N.C4, 1], [N.D4, 1],
+
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+  [N.C5, 1], [N.G4, 1], [N.E4, 1], [N.G4, 1],
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+  [N.C4, 1], [N.D4, 1], [N.E4, 1], [N.F4, 1],
+
+  // SECTION B
+  [N.A3, 1], [N.E4, 1], [N.A3, 1], [N.E4, 1],
+  [N.A3, 1], [N.E4, 1], [N.A3, 1], [N.E4, 1],
+  [N.G3, 1], [N.D4, 1], [N.G3, 1], [N.D4, 1],
+  [N.G3, 1], [N.D4, 1], [N.G3, 1], [N.D4, 1],
+
+  [N.F3, 1], [N.C4, 1], [N.F3, 1], [N.C4, 1],
+  [N.F3, 1], [N.C4, 1], [N.F3, 1], [N.C4, 1],
+  [N.G3, 1], [N.D4, 1], [N.G3, 1], [N.D4, 1],
+  [N.G3, 1], [N.D4, 1], [N.G3, 1], [N.D4, 1],
+
+  [N.C4, 1], [N.G4, 1], [N.C4, 1], [N.G4, 1],
+  [N.C4, 1], [N.G4, 1], [N.C4, 1], [N.G4, 1],
+  [N.F4, 1], [N.A4, 1], [N.F4, 1], [N.A4, 1],
+  [N.F4, 1], [N.D4, 1], [N.F4, 1], [N.D4, 1],
+
+  [N.G4, 1], [N.E4, 1], [N.G4, 1], [N.E4, 1],
+  [N.C4, 1], [N.E4, 1], [N.G4, 1], [N.E4, 1],
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+  [N.C4, 1], [N.G3, 1], [N.E4, 1], [N.G3, 1],
+]);
+
+// ---- BASS (Triangle wave) ----
+const bassPattern = p([
+  // INTRO
+  [N.C3, 8], [N.G3, 8],
+  [N.A3, 8], [N.F3, 4], [N.G3, 4],
+
+  // SECTION A
+  [N.C3, 8], [N.G3, 8],
+  [N.F3, 8], [N.G3, 4], [N.C4, 4],
+  [N.C3, 8], [N.G3, 8],
+  [N.A3, 8], [N.G3, 4], [N.C4, 4],
+
+  // SECTION A repeat
+  [N.C3, 8], [N.G3, 8],
+  [N.F3, 8], [N.G3, 4], [N.C4, 4],
+  [N.C3, 8], [N.G3, 8],
+  [N.A3, 8], [N.G3, 4], [N.C4, 4],
+
+  // SECTION B
+  [N.A2, 8], [N.E3, 8],
+  [N.G2, 8], [N.D3, 8],
+  [N.F2, 8], [N.C3, 8],
+  [N.G2, 8], [N.D3, 8],
+
+  [N.C3, 8], [N.G3, 8],
+  [N.F3, 8], [N.G3, 8],
+  [N.E3, 8], [N.D3, 4], [N.C3, 4],
+  [N.C3, 4], [N.G2, 4], [N.C3, 4], [N.D3, 4],
+]);
+
+// ---- PERCUSSION (Noise — snare / hi-hat) ----
+// Using noise bursts: high = hi-hat-ish, low = snare-ish
+const percPattern = p([
+  // INTRO
+  ['hh', 2], ['sn', 2], ['hh', 2], ['sn', 2],
+  ['hh', 2], ['sn', 2], ['hh', 2], ['sn', 2],
+  ['hh', 2], ['sn', 2], ['hh', 2], ['sn', 2],
+  ['hh', 2], ['sn', 2], ['hh', 2], ['sn', 2],
+
+  // SECTION A
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  // SECTION B — same rhythm, maybe slight variations would be nice
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 2],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 2],
+  ['hh', 1], ['sn', 1], ['hh', 1], ['sn', 1],
+]);
+
+// ---- state ----
+let isPlaying = false;
+let volume = 0.65;
+let currentStep = 0;
+let scheduleAhead = 0.1; // seconds
+let lookAhead = 0.05;    // seconds
+let nextStepTime = 0;    // audio context time
+let timerID = null;
+let activeNodes = { melody: null, harmony: null, bass: null, perc: null };
+const totalSteps = melodyPattern.length;
+
+// ---- create audio nodes ----
+const masterGain = audioCtx.createGain();
+masterGain.gain.value = volume;
+masterGain.connect(audioCtx.destination);
+
+// ---- oscillator helpers ----
+function createSquare(ctx, freq, duty, gainVal) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sine'; // We'll fake square with wave shaping
+  const gain = ctx.createGain();
+  gain.gain.value = gainVal;
+
+  // Custom periodic wave for square sound
+  const real = new Float32Array([0, 0, 0, 0, 0, 0, 0, 0]);
+  const imag = new Float32Array([0, 4/Math.PI, 0, 4/(3*Math.PI), 0, 4/(5*Math.PI), 0, 4/(7*Math.PI)]);
+  // Adjust duty cycle by scaling harmonics
+  // For 50% duty: all odd harmonics present
+  // For 25% duty (brighter): different harmonic balance
+  if (Math.abs(duty - 0.5) > 0.01) {
+    // 25% duty: every other harmonic
+    for (let i = 0; i < imag.length; i++) {
+      // Keep as is - the default 50% square is fine
+    }
+  }
+  const wave = ctx.createPeriodicWave(real, imag, { disableNormalization: true });
+  osc.setPeriodicWave(wave);
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(masterGain);
+  return { osc, gain };
+}
+
+function createTriangle(ctx, freq, gainVal) {
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  const gain = ctx.createGain();
+  gain.gain.value = gainVal;
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(masterGain);
+  return { osc, gain };
+}
+
+function createNoiseHit(ctx, type, gainVal) {
+  const bufferSize = ctx.sampleRate * (type === 'hh' ? 0.05 : 0.1);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+    // Envelope
+    const env = Math.exp(-i / (bufferSize * (type === 'hh' ? 0.06 : 0.15)));
+    data[i] *= env;
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+
+  const gain = ctx.createGain();
+  gain.gain.value = gainVal;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = type === 'hh' ? 8000 : 2000;
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  return { source, gain };
+}
+
+// ---- scheduling ----
+function scheduleStep(stepIndex, time) {
+  const melodyNote = melodyPattern[stepIndex];
+  const harmonyNote = harmonyPattern[stepIndex];
+  const bassNote = bassPattern[stepIndex];
+  const percNote = percPattern[stepIndex];
+
+  // Melody
+  if (melodyNote && melodyNote[0] !== null) {
+    const { osc, gain } = createSquare(audioCtx, melodyNote[0], 0.5, volume * 0.25);
+    osc.start(time);
+    const dur = (melodyNote[1] * ROW) / 1000;
+    gain.gain.setValueAtTime(volume * 0.25, time);
+    gain.gain.setValueAtTime(volume * 0.25, time + dur * 0.9);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
+    osc.stop(time + dur + 0.01);
+    activeNodes.melody = osc;
+  }
+
+  // Harmony
+  if (harmonyNote && harmonyNote[0] !== null) {
+    const { osc, gain } = createSquare(audioCtx, harmonyNote[0], 0.25, volume * 0.12);
+    osc.start(time);
+    const dur = (harmonyNote[1] * ROW) / 1000;
+    gain.gain.setValueAtTime(volume * 0.12, time);
+    gain.gain.setValueAtTime(volume * 0.12, time + dur * 0.9);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
+    osc.stop(time + dur + 0.01);
+    activeNodes.harmony = osc;
+  }
+
+  // Bass
+  if (bassNote && bassNote[0] !== null) {
+    const { osc, gain } = createTriangle(audioCtx, bassNote[0], volume * 0.2);
+    osc.start(time);
+    const dur = (bassNote[1] * ROW) / 1000;
+    gain.gain.setValueAtTime(volume * 0.2, time);
+    gain.gain.setValueAtTime(volume * 0.2, time + dur * 0.95);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
+    osc.stop(time + dur + 0.01);
+    activeNodes.bass = osc;
+  }
+
+  // Percussion
+  if (percNote && percNote[0] !== null) {
+    const { source, gain } = createNoiseHit(audioCtx, percNote[0], volume * (percNote[0] === 'hh' ? 0.1 : 0.15));
+    source.start(time);
+    activeNodes.perc = source;
+  }
+
+  // Update visualizer
+  updateVisualizer(stepIndex, melodyNote, bassNote, percNote);
+}
+
+function scheduler() {
+  while (nextStepTime < audioCtx.currentTime + scheduleAhead) {
+    scheduleStep(currentStep, nextStepTime);
+
+    const dur = melodyPattern[currentStep][1] * ROW / 1000;
+    nextStepTime += dur;
+
+    currentStep = (currentStep + 1) % totalSteps;
+
+    // Update section display
+    updateSectionDisplay(currentStep);
+    updateTimeDisplay(currentStep);
+  }
+  timerID = setTimeout(scheduler, lookAhead * 1000);
+}
+
+// ---- UI updates ----
+function updateVisualizer(step, melody, bass, perc) {
+  const bars = document.querySelectorAll('.bar');
+  for (let i = 0; i < bars.length; i++) {
+    const noteOn = melody && melody[0] !== null && i < 16;
+    const height = noteOn ? 30 + Math.random() * 70 : 5 + Math.random() * 15;
+    bars[i].style.height = height + 'px';
+    bars[i].classList.toggle('active', noteOn);
+  }
+
+  document.getElementById('dotMelody').classList.toggle('on', melody && melody[0] !== null);
+  document.getElementById('dotHarmony').classList.toggle('on', true); // always show something
+  document.getElementById('dotBass').classList.toggle('on', bass && bass[0] !== null);
+  document.getElementById('dotPerc').classList.toggle('on', perc && perc[0] !== null);
+}
+
+function updateSectionDisplay(step) {
+  const section = step < 32 ? '前奏' :
+    step < 96 ? '段落 A' :
+    step < 160 ? '段落 B' : '段落 A';
+  document.getElementById('sectionDisplay').textContent = '◈ ' + section;
+}
+
+function updateTimeDisplay(step) {
+  const totalBeats = step * 0.25; // each step = 1/16 note
+  const secs = (totalBeats / BPM) * 60;
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  document.getElementById('timeDisplay').textContent =
+    String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+// ---- controls ----
+const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopBtn');
+const volumeSlider = document.getElementById('volumeSlider');
+const bpmDisplay = document.getElementById('bpmDisplay');
+
+playBtn.addEventListener('click', () => {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (isPlaying) return;
+  isPlaying = true;
+  currentStep = 0;
+  nextStepTime = audioCtx.currentTime + 0.05;
+  playBtn.textContent = '⏸ 播放中';
+  playBtn.classList.add('playing');
+  scheduler();
+});
+
+stopBtn.addEventListener('click', () => {
+  if (!isPlaying) return;
+  isPlaying = false;
+  clearTimeout(timerID);
+  timerID = null;
+  playBtn.textContent = '▶ 播放';
+  playBtn.classList.remove('playing');
+  // Reset visualizer
+  document.querySelectorAll('.bar').forEach(b => {
+    b.style.height = '3px';
+    b.classList.remove('active');
+  });
+  document.getElementById('timeDisplay').textContent = '00:00';
+  document.getElementById('sectionDisplay').textContent = '—';
+  document.querySelectorAll('.dot').forEach(d => d.classList.remove('on'));
+});
+
+volumeSlider.addEventListener('input', (e) => {
+  volume = e.target.value / 100;
+  masterGain.gain.value = volume;
+});
+
+// ---- init visualizer bars ----
+const viz = document.getElementById('visualizer');
+for (let i = 0; i < 32; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  bar.style.height = '3px';
+  viz.appendChild(bar);
+}
+
+// ---- keyboard shortcut ----
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ' || e.key === 'Space') {
+    e.preventDefault();
+    playBtn.click();
+  }
+});
+
+console.log('🐍 8-bit Snake Music loaded! Press play or hit Space.');
+</script>
+</body>
+</html>
